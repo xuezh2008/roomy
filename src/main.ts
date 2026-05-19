@@ -16,6 +16,7 @@ import { createStore } from "./state/store";
 import { attachObjectsBridge } from "./objects/bridge";
 import { attachSelectionVisual } from "./objects/selection";
 import { DEFAULT_ROOM, type RoomyState } from "./objects/catalog";
+import { loadState, saveState } from "./persistence/localStore";
 
 // Phase 3b wiring: OrbitControls + TransformControls (XZ translate) +
 // click-to-select raycaster + selection visuals + delete/rotate/Esc keys.
@@ -41,12 +42,17 @@ const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
 camera.position.set(4, 3, 5);
 camera.lookAt(0, 0.5, 0);
 
-// --- Store ---
+// --- Store (hydrated from localStorage if present) ---
+const persisted = loadState();
 const store = createStore<RoomyState>({
-  room: DEFAULT_ROOM,
-  objects: [],
-  selectedId: null,
+  room: persisted?.room ?? DEFAULT_ROOM,
+  objects: persisted?.objects ?? [],
+  selectedId: null, // selection is transient UI state, never persisted
 });
+// Auto-save on every state change (debounced 250 ms inside saveState).
+const unsubscribePersist = store.subscribe((state) =>
+  saveState({ room: state.room, objects: state.objects }),
+);
 
 // --- Camera controls ---
 const orbit = attachOrbit(camera, renderer.domElement);
@@ -155,6 +161,7 @@ if (import.meta.hot) {
     gizmo.detach();
     objectsBridge.detach();
     orbit.detach();
+    unsubscribePersist();
     renderer.domElement.remove();
     renderer.dispose();
   });
