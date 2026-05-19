@@ -1,14 +1,17 @@
 import * as THREE from "three";
 
 // Bridge CSS custom properties to three.js values.
-// CSS colors are sRGB; three.js materials default to linear.
-// Without convertSRGBToLinear() the scene renders washed out.
+// CSS colors are sRGB; three.js (r155+) auto-converts via setStyle() because
+// ColorManagement is enabled by default. Do NOT call convertSRGBToLinear()
+// here — that would be a second pass and the scene goes near-black after
+// tone mapping. The renderer handles linear → sRGB at the output stage
+// via outputColorSpace = SRGBColorSpace.
 
 const root = () => getComputedStyle(document.documentElement);
 
 export function cssColor(name: string, fallback = "#ffffff"): THREE.Color {
   const value = root().getPropertyValue(name).trim() || fallback;
-  return new THREE.Color().setStyle(value).convertSRGBToLinear();
+  return new THREE.Color().setStyle(value);
 }
 
 export function cssNumber(name: string, fallback = 0): number {

@@ -30,7 +30,9 @@ camera.lookAt(0, 0.5, 0);
 
 // --- Lights (Phase 1 minimum: HemisphereLight only)
 // Phase 2 adds DirectionalLight with shadows.
-const hemi = new THREE.HemisphereLight(0xf3e8d2, 0x9e8a68, 0.85);
+// three.js r155+ uses physically-based light intensity units. Legacy "1"
+// corresponds to ~PI in the new units; tune by feel rather than the old numbers.
+const hemi = new THREE.HemisphereLight(0xf3e8d2, 0x9e8a68, 2.6);
 scene.add(hemi);
 
 // --- Grid floor (drafting paper: 10cm minor, 1m major) ---
@@ -41,12 +43,14 @@ const majorGrid = new THREE.GridHelper(10, 10, inkColor, inkColor);
 const majorMat = majorGrid.material as THREE.LineBasicMaterial;
 majorMat.opacity = 0.35;
 majorMat.transparent = true;
+majorMat.toneMapped = false; // unlit indicator; skip ACES so ink doesn't crush to black
 scene.add(majorGrid);
 
 const minorGrid = new THREE.GridHelper(10, 100, inkColor, inkColor);
 const minorMat = minorGrid.material as THREE.LineBasicMaterial;
 minorMat.opacity = 0.12;
 minorMat.transparent = true;
+minorMat.toneMapped = false;
 minorGrid.position.y = -0.001; // avoid z-fighting with the major grid
 scene.add(minorGrid);
 
