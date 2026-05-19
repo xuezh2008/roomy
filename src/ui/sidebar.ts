@@ -132,7 +132,24 @@ export function attachSidebar(
       objectsSection.list.replaceChildren(buildEmptyCard());
       return;
     }
-    const rows = state.objects.map((o) => buildObjectRow(o));
+    const rows = state.objects.map((o) =>
+      buildObjectRow(
+        o,
+        o.id === state.selectedId,
+        // onClick: select the row's object
+        () =>
+          store.set((s) =>
+            s.selectedId === o.id ? s : { ...s, selectedId: o.id },
+          ),
+        // onDelete: remove from objects + clear selection if it was selected
+        () =>
+          store.set((s) => ({
+            ...s,
+            selectedId: s.selectedId === o.id ? null : s.selectedId,
+            objects: s.objects.filter((x) => x.id !== o.id),
+          })),
+      ),
+    );
     objectsSection.list.replaceChildren(...rows);
   };
 
@@ -267,10 +284,19 @@ function buildEmptyCard(): HTMLElement {
   return card;
 }
 
-function buildObjectRow(obj: RoomObject): HTMLElement {
-  const row = document.createElement("div");
-  row.className = "object-row";
+function buildObjectRow(
+  obj: RoomObject,
+  selected: boolean,
+  onClick: () => void,
+  onDelete: () => void,
+): HTMLElement {
+  const row = document.createElement("button");
+  row.type = "button";
+  row.className = "object-row" + (selected ? " selected" : "");
   row.dataset.id = obj.id;
+  row.addEventListener("click", () => {
+    onClick();
+  });
 
   const swatch = document.createElement("span");
   swatch.className = "object-swatch";
@@ -284,7 +310,17 @@ function buildObjectRow(obj: RoomObject): HTMLElement {
   dims.className = "object-dims";
   dims.textContent = `${cm(obj.dims.w)}×${cm(obj.dims.h)}×${cm(obj.dims.d)}`;
 
-  row.append(swatch, name, dims);
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "object-row__delete";
+  del.setAttribute("aria-label", `Delete ${obj.name}`);
+  del.textContent = "×";
+  del.addEventListener("click", (e) => {
+    e.stopPropagation(); // don't fire row click first
+    onDelete();
+  });
+
+  row.append(swatch, name, dims, del);
   return row;
 }
 
