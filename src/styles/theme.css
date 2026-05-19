@@ -1,0 +1,120 @@
+/* Roomy theme — drafting-table aesthetic. Tokens + base shell.
+ * Design source of truth: DESIGN.md §10.
+ * Component CSS should reference var(--*) so a re-skin is one block. */
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  /* paper + ink */
+  --paper:         #f4ebd9;
+  --paper-canvas:  #ece1c8;
+  --ink:           #1c2e4a;
+  --ink-soft:      rgba(28, 46, 74, 0.6);
+  --ink-mute:      rgba(28, 46, 74, 0.4);
+  --rule:          rgba(28, 46, 74, 0.35);
+  --rule-soft:     rgba(28, 46, 74, 0.18);
+
+  /* accents */
+  --accent:        #b8453a;            /* drafting red */
+  --accent-soft:   rgba(184, 69, 58, 0.14);
+  --success:       #2f6b4f;
+  --danger:        #a83426;
+
+  /* axis colors (also read by 3D HelperGroup at boot) */
+  --axis-x:        #b8453a;
+  --axis-y:        #2f6b4f;
+  --axis-z:        #1c2e4a;
+
+  /* object swatch palette (cycle by index) */
+  --swatch-1: #3d4a6b;
+  --swatch-2: #a8523f;
+  --swatch-3: #7d8b6c;
+  --swatch-4: #c2a85a;
+  --swatch-5: #5b6f7b;
+  --swatch-6: #8b6f47;
+  --swatch-7: #6b4a5c;
+  --swatch-8: #4d7060;
+
+  /* surfaces */
+  --input-bg:       rgba(255, 253, 247, 0.7);
+  --btn-bg:         rgba(255, 253, 247, 0.7);
+  --btn-primary-bg: #1c2e4a;
+  --btn-primary-fg: #f4ebd9;
+
+  /* type */
+  --font-ui:       "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono:     "IBM Plex Mono", ui-monospace, monospace;
+  --font-display:  "IBM Plex Mono", monospace;
+
+  /* shape */
+  --radius:        2px;
+  --radius-lg:     3px;
+  --border:        1px solid var(--rule);
+  --border-strong: 1px solid var(--ink);
+  --shadow-sm:     none;            /* drafting paper has no drop shadows */
+  --shadow-md:     none;
+
+  /* layout */
+  --toolbar-h:     52px;
+  --drawer-h:      64px;            /* collapsed; expanded = 280px */
+  --sidebar-w:     332px;
+  --section-gap:   18px;
+
+  /* 3D scene defaults — read by scene.ts on init via cssVar.ts */
+  --scene-bg:         #ece1c8;
+  --scene-floor:      #e6d8b8;
+  --scene-wall:       #ece1c8;
+  --scene-grid-major: rgba(28, 46, 74, 0.35);
+  --scene-grid-minor: rgba(28, 46, 74, 0.16);
+  --scene-fog:        #ece1c8;
+  --scene-fog-near:   3.0;
+  --scene-fog-far:    14.0;
+}
+
+/* Base shell — full-viewport canvas-dominant layout.
+ * Body fills the dynamic viewport (handles iOS Safari toolbar autohide).
+ * Canvas sits behind everything; UI chrome layers on top. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none; /* canvas owns its gestures; no native scroll/zoom */
+  outline: none;
+}
+
+/* Mobile mode swap stub. The body gets [data-mode='mobile'|'desktop']
+ * from src/ui/mobile.ts on boot + on viewport changes.
+ * Layout-specific overrides land in component CSS later. */
+
+html[data-mode="mobile"] body {
+  font-size: 14px;
+}

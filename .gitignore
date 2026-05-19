@@ -29,3 +29,4 @@ public/models/*.gltf
 *.njsproj
 *.sln
 *.sw?
+.gstack/
