@@ -3,6 +3,7 @@
 // UI components convert via cm/100 on submit, m*100 on display.
 
 import { cssHex } from "../lifecycle/cssVar";
+import type { Render } from "../ai/types";
 
 export interface RoomObject {
   id: string;
@@ -36,6 +37,7 @@ export interface RoomyState {
   objects: RoomObject[];
   selectedId: string | null;
   fog: FogSettings;
+  renders: Render[]; // most-recent-first, max 4 (see ai/types.ts MAX_RENDER_HISTORY)
 }
 
 export const DEFAULT_ROOM: Room = { width: 5, depth: 4, height: 2.6 };

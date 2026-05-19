@@ -1,5 +1,6 @@
 import "./styles/theme.css";
 import "./styles/sidebar.css";
+import "./styles/renderDrawer.css";
 import * as THREE from "three";
 
 import { attachResize } from "./lifecycle/resize";
@@ -14,6 +15,9 @@ import { attachRaycaster } from "./ui/raycaster";
 import { attachCameraPanel } from "./ui/cameraPanel";
 import { attachFogPanel } from "./ui/fogPanel";
 import { attachFogBridge } from "./scene/fogBridge";
+import { attachRenderDrawer } from "./ui/renderDrawer";
+import { attachSettingsModal } from "./ui/settingsModal";
+import { loadSettings, saveSettings, type AISettings } from "./persistence/settings";
 import { buildScene } from "./scene";
 import { createStore } from "./state/store";
 import { attachObjectsBridge } from "./objects/bridge";
@@ -52,11 +56,21 @@ const store = createStore<RoomyState>({
   objects: persisted?.objects ?? [],
   selectedId: null, // selection is transient UI state, never persisted
   fog: persisted?.fog ?? DEFAULT_FOG,
+  renders: persisted?.renders ?? [],
 });
 // Auto-save on every state change (debounced 250 ms inside saveState).
 const unsubscribePersist = store.subscribe((state) =>
-  saveState({ room: state.room, objects: state.objects, fog: state.fog }),
+  saveState({
+    room: state.room,
+    objects: state.objects,
+    fog: state.fog,
+    renders: state.renders,
+  }),
 );
+
+// AI settings (API keys + provider preference) live in their own
+// localStorage entry, mutable via the settings modal.
+let aiSettings: AISettings = loadSettings();
 
 // --- Camera controls ---
 const orbit = attachOrbit(camera, renderer.domElement);
@@ -101,6 +115,28 @@ const cameraPanel = attachCameraPanel({
   orbit: orbit.controls,
 });
 const fogPanel = attachFogPanel({ host: sidebar.root, store });
+
+// --- Settings modal + AI render drawer ---
+const settingsModal = attachSettingsModal({
+  host: document.body,
+  getSettings: () => aiSettings,
+  setSettings: (next) => {
+    aiSettings = next;
+    saveSettings(next);
+  },
+});
+
+const renderDrawer = attachRenderDrawer({
+  host: canvasShell,
+  store,
+  getSettings: () => aiSettings,
+  onOpenSettings: (focus) => settingsModal.open(focus),
+  snapshotArgs: () => ({
+    scene,
+    camera,
+    orbitTarget: orbit.controls.target,
+  }),
+});
 const detachKeyboard = attachKeyboard({
   onAddObject: () => sidebar.focusNameInput(),
   onRotate: () => {
@@ -169,6 +205,8 @@ if (import.meta.hot) {
     visibility.detach();
     mobile.detach();
     detachKeyboard();
+    renderDrawer.detach();
+    settingsModal.detach();
     fogPanel.detach();
     cameraPanel.detach();
     sidebar.detach();
@@ -195,5 +233,10 @@ if (import.meta.env.DEV) {
     orbit,
     gizmo,
     selectionVisual,
+    renderDrawer,
+    settingsModal,
+    get aiSettings() {
+      return aiSettings;
+    },
   };
 }

@@ -4,14 +4,15 @@ import {
   type Room,
   type RoomObject,
 } from "../objects/catalog";
+import type { Render } from "../ai/types";
 
 // Persistence layer: versioned, debounced, quota-safe.
-// v1: {room, objects}. v2 adds fog. Phase 7 will bump to v3 for AI render
-// history. We bump on schema additions even when forward-compatible defaults
-// could be applied — keeps the contract honest.
+// v1: {room, objects}. v2 adds fog. v3 adds renders (AI history, ~500 KB
+// per PNG so quota matters — renders are evicted before scene state on
+// QuotaExceededError).
 
 const KEY = "roomy:state";
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const DEBOUNCE_MS = 250;
 
 interface Persisted {
@@ -19,12 +20,14 @@ interface Persisted {
   room: Room;
   objects: RoomObject[];
   fog: FogSettings;
+  renders?: Render[];
 }
 
 export interface LoadedState {
   room: Room;
   objects: RoomObject[];
   fog: FogSettings;
+  renders: Render[];
 }
 
 export function loadState(): LoadedState | null {
@@ -57,6 +60,7 @@ export function loadState(): LoadedState | null {
       room: parsed.room,
       objects: parsed.objects,
       fog: parsed.fog ?? DEFAULT_FOG,
+      renders: Array.isArray(parsed.renders) ? parsed.renders : [],
     };
   } catch (e) {
     console.warn("[roomy] failed to parse persisted state:", e);
@@ -77,25 +81,47 @@ function stripBlobModelUrls(objects: RoomObject[]): RoomObject[] {
   );
 }
 
+function buildPayload(state: LoadedState, renders: Render[]): Persisted {
+  return {
+    version: SCHEMA_VERSION,
+    room: state.room,
+    objects: stripBlobModelUrls(state.objects),
+    fog: state.fog,
+    renders: renders.length > 0 ? renders : undefined,
+  };
+}
+
+function isQuotaError(e: unknown): boolean {
+  return (
+    e instanceof DOMException &&
+    (e.name === "QuotaExceededError" || e.code === 22)
+  );
+}
+
 export function saveState(state: LoadedState): void {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    try {
-      const payload: Persisted = {
-        version: SCHEMA_VERSION,
-        room: state.room,
-        objects: stripBlobModelUrls(state.objects),
-        fog: state.fog,
-      };
-      localStorage.setItem(KEY, JSON.stringify(payload));
-    } catch (e) {
-      if (
-        e instanceof DOMException &&
-        (e.name === "QuotaExceededError" || e.code === 22)
-      ) {
-        console.warn("[roomy] localStorage quota exceeded; state not saved");
-      } else {
-        console.warn("[roomy] save failed:", e);
+    // First attempt: everything.
+    let renders = state.renders;
+    while (true) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(buildPayload(state, renders)));
+        return;
+      } catch (e) {
+        if (!isQuotaError(e)) {
+          console.warn("[roomy] save failed:", e);
+          return;
+        }
+        // Quota: drop the oldest render and retry. Renders are recoverable;
+        // scene state is not, so we always evict renders before bailing.
+        if (renders.length > 0) {
+          renders = renders.slice(0, -1);
+          continue;
+        }
+        console.warn(
+          "[roomy] localStorage quota exceeded even without renders; state not saved",
+        );
+        return;
       }
     }
   }, DEBOUNCE_MS);
@@ -107,13 +133,7 @@ export function flushSave(state: LoadedState): void {
     saveTimer = undefined;
   }
   try {
-    const payload: Persisted = {
-      version: SCHEMA_VERSION,
-      room: state.room,
-      objects: stripBlobModelUrls(state.objects),
-      fog: state.fog,
-    };
-    localStorage.setItem(KEY, JSON.stringify(payload));
+    localStorage.setItem(KEY, JSON.stringify(buildPayload(state, state.renders)));
   } catch (e) {
     console.warn("[roomy] flush save failed:", e);
   }
