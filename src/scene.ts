@@ -78,6 +78,24 @@ export function buildScene(room: RoomDimensions = DEFAULT_ROOM): SceneState {
   floor.receiveShadow = true;
   roomGroup.add(floor);
 
+  // Floor perimeter outline (ink stroke) — defines the room footprint
+  // clearly, like a drafting border. Floats just above the floor mesh so
+  // it survives shadow rendering without z-fighting.
+  const floorBorder = new THREE.LineSegments(
+    new THREE.EdgesGeometry(
+      new THREE.PlaneGeometry(room.width, room.depth),
+    ),
+    new THREE.LineBasicMaterial({
+      color: inkColor,
+      transparent: true,
+      opacity: 0.7,
+      toneMapped: false,
+    }),
+  );
+  floorBorder.rotation.x = -Math.PI / 2;
+  floorBorder.position.y = 0.001;
+  roomGroup.add(floorBorder);
+
   // Drafting-paper grid: 10 cm minor + 1 m major. Lives on top of the floor.
   // toneMapped: false because the unlit linework would otherwise crush to
   // black under ACES Filmic.
@@ -96,17 +114,17 @@ export function buildScene(room: RoomDimensions = DEFAULT_ROOM): SceneState {
   minorGrid.position.y = -0.001;
   roomGroup.add(minorGrid);
 
-  // Walls: cream fill (same as scene.background so they "vanish") plus an
-  // ink EdgesGeometry overlay so the room outline reads as drafting lines.
-  // Walls don't cast or receive shadows — they're decorative outlines.
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: wallColor,
-    roughness: 0.95,
-    metalness: 0,
-  });
+  // Walls: edges-only. DESIGN.md §4 calls for walls that "vanish except for
+  // their edges" — a true drafting-paper read. Solid wall fills (even in cream)
+  // occlude the room interior from any outside camera angle. The line outlines
+  // alone define the room boundary; the camera sees straight through to the
+  // floor + objects.
+  // Reference: `wallColor` is unused here but kept in DESIGN.md for v2's
+  // "inside-the-room" camera mode (when we'll want solid walls again).
+  void wallColor;
   const edgeMat = new THREE.LineBasicMaterial({
     color: inkColor,
-    opacity: 0.5,
+    opacity: 0.55,
     transparent: true,
     toneMapped: false,
   });
@@ -120,10 +138,8 @@ export function buildScene(room: RoomDimensions = DEFAULT_ROOM): SceneState {
     pz: number,
   ): THREE.Group => {
     const wall = new THREE.Group();
-    const geo = new THREE.BoxGeometry(sx, sy, sz);
-    const mesh = new THREE.Mesh(geo, wallMat);
-    wall.add(mesh);
-    const edges = new THREE.EdgesGeometry(geo);
+    const boxGeo = new THREE.BoxGeometry(sx, sy, sz);
+    const edges = new THREE.EdgesGeometry(boxGeo);
     wall.add(new THREE.LineSegments(edges, edgeMat));
     wall.position.set(px, py, pz);
     return wall;
