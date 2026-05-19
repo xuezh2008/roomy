@@ -1,22 +1,30 @@
-import type { Room, RoomObject } from "../objects/catalog";
+import {
+  DEFAULT_FOG,
+  type FogSettings,
+  type Room,
+  type RoomObject,
+} from "../objects/catalog";
 
 // Persistence layer: versioned, debounced, quota-safe.
-// Schema is intentionally small (room + objects). Phase 7 bumps to v2 when
-// AI render history joins.
+// v1: {room, objects}. v2 adds fog. Phase 7 will bump to v3 for AI render
+// history. We bump on schema additions even when forward-compatible defaults
+// could be applied — keeps the contract honest.
 
 const KEY = "roomy:state";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const DEBOUNCE_MS = 250;
 
 interface Persisted {
   version: number;
   room: Room;
   objects: RoomObject[];
+  fog: FogSettings;
 }
 
 export interface LoadedState {
   room: Room;
   objects: RoomObject[];
+  fog: FogSettings;
 }
 
 export function loadState(): LoadedState | null {
@@ -45,7 +53,11 @@ export function loadState(): LoadedState | null {
         return null;
       }
     }
-    return { room: parsed.room, objects: parsed.objects };
+    return {
+      room: parsed.room,
+      objects: parsed.objects,
+      fog: parsed.fog ?? DEFAULT_FOG,
+    };
   } catch (e) {
     console.warn("[roomy] failed to parse persisted state:", e);
     return null;
@@ -62,6 +74,7 @@ export function saveState(state: LoadedState): void {
         version: SCHEMA_VERSION,
         room: state.room,
         objects: state.objects,
+        fog: state.fog,
       };
       localStorage.setItem(KEY, JSON.stringify(payload));
     } catch (e) {
@@ -87,6 +100,7 @@ export function flushSave(state: LoadedState): void {
       version: SCHEMA_VERSION,
       room: state.room,
       objects: state.objects,
+      fog: state.fog,
     };
     localStorage.setItem(KEY, JSON.stringify(payload));
   } catch (e) {

@@ -24,13 +24,28 @@ export interface Room {
   height: number; // meters
 }
 
+export interface FogSettings {
+  enabled: boolean;
+  color: string; // hex
+  near: number; // meters from camera
+  far: number; // meters from camera
+}
+
 export interface RoomyState {
   room: Room;
   objects: RoomObject[];
   selectedId: string | null;
+  fog: FogSettings;
 }
 
 export const DEFAULT_ROOM: Room = { width: 5, depth: 4, height: 2.6 };
+
+export const DEFAULT_FOG: FogSettings = {
+  enabled: false,
+  color: "#ece1c8", // matches --scene-bg so there's no visible seam
+  near: 3.0,
+  far: 14.0,
+};
 
 export const DIM_MIN_CM = 5;
 export const DIM_MAX_CM = 2000;

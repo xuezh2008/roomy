@@ -435,6 +435,109 @@
   text-decoration-color: var(--ink);
 }
 
+/* --- FOG section --- */
+
+.fog-toggle-row,
+.fog-slider-row,
+.fog-color-row {
+  display: grid;
+  grid-template-columns: 50px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fog-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.toggle {
+  grid-column: 2 / -1;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  text-align: left;
+  width: auto;
+  justify-self: start;
+  transition: all 80ms ease-out;
+}
+
+.toggle.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.fog-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--rule);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.fog-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--ink);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1.5px solid var(--paper);
+}
+
+.fog-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--ink);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1.5px solid var(--paper);
+}
+
+.fog-readout {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  text-align: right;
+  min-width: 3ch;
+}
+
+.fog-color {
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+}
+
+.fog-color-hex {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+.sidebar-section.fog-off .fog-slider,
+.sidebar-section.fog-off .fog-color {
+  opacity: 0.5;
+}
+
 /* --- Mobile (Phase 3b will replace with bottom-sheet) --- */
 
 html[data-mode="mobile"] .sidebar {

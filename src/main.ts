@@ -12,11 +12,13 @@ import { attachOrbit } from "./ui/orbit";
 import { attachTransformGizmo } from "./ui/transformGizmo";
 import { attachRaycaster } from "./ui/raycaster";
 import { attachCameraPanel } from "./ui/cameraPanel";
+import { attachFogPanel } from "./ui/fogPanel";
+import { attachFogBridge } from "./scene/fogBridge";
 import { buildScene } from "./scene";
 import { createStore } from "./state/store";
 import { attachObjectsBridge } from "./objects/bridge";
 import { attachSelectionVisual } from "./objects/selection";
-import { DEFAULT_ROOM, type RoomyState } from "./objects/catalog";
+import { DEFAULT_FOG, DEFAULT_ROOM, type RoomyState } from "./objects/catalog";
 import { loadState, saveState } from "./persistence/localStore";
 
 // Phase 3b wiring: OrbitControls + TransformControls (XZ translate) +
@@ -49,10 +51,11 @@ const store = createStore<RoomyState>({
   room: persisted?.room ?? DEFAULT_ROOM,
   objects: persisted?.objects ?? [],
   selectedId: null, // selection is transient UI state, never persisted
+  fog: persisted?.fog ?? DEFAULT_FOG,
 });
 // Auto-save on every state change (debounced 250 ms inside saveState).
 const unsubscribePersist = store.subscribe((state) =>
-  saveState({ room: state.room, objects: state.objects }),
+  saveState({ room: state.room, objects: state.objects, fog: state.fog }),
 );
 
 // --- Camera controls ---
@@ -87,13 +90,17 @@ const detachRaycaster = attachRaycaster({
   isGizmoRecentlyDragged: () => gizmo.isRecentlyDragged() || gizmo.isDragging(),
 });
 
-// --- Sidebar + camera panel + keyboard ---
+// --- Reactive fog (scene.fog + scene.background follow store.fog) ---
+const detachFogBridge = attachFogBridge(scene, store);
+
+// --- Sidebar + camera panel + fog panel + keyboard ---
 const sidebar = attachSidebar(app, store);
 const cameraPanel = attachCameraPanel({
   host: sidebar.root,
   camera,
   orbit: orbit.controls,
 });
+const fogPanel = attachFogPanel({ host: sidebar.root, store });
 const detachKeyboard = attachKeyboard({
   onAddObject: () => sidebar.focusNameInput(),
   onRotate: () => {
@@ -162,8 +169,10 @@ if (import.meta.hot) {
     visibility.detach();
     mobile.detach();
     detachKeyboard();
+    fogPanel.detach();
     cameraPanel.detach();
     sidebar.detach();
+    detachFogBridge();
     detachRaycaster();
     selectionVisual.detach();
     gizmo.detach();
