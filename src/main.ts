@@ -6,9 +6,10 @@ import { attachResize } from "./lifecycle/resize";
 import { attachContextLoss } from "./lifecycle/contextLoss";
 import { attachVisibility } from "./lifecycle/visibility";
 import { attachMobileMode } from "./ui/mobile";
+import { buildScene } from "./scene";
 
-// Phase 1 wiring: empty scene + drafting-paper grid + placeholder cube.
-// Phase 2 will add the room shell, sun (DirectionalLight), shadows, and fog.
+// Phase 2 wiring: scene + room shell + lights with shadows live in scene.ts.
+// main.ts owns renderer, camera, the placeholder cube, lifecycle, and RAF.
 
 const app = document.getElementById("app");
 if (!app) throw new Error("#app element missing from index.html");
@@ -17,44 +18,19 @@ if (!app) throw new Error("#app element missing from index.html");
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 app.appendChild(renderer.domElement);
 
-// --- Scene ---
-const scene = new THREE.Scene();
-scene.background = cssColor("--scene-bg");
+// --- Scene (room shell + lights) ---
+const { scene } = buildScene();
 
-// --- Camera (iso-ish framing for an empty scene) ---
+// --- Camera (iso-ish framing) ---
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
 camera.position.set(4, 3, 5);
 camera.lookAt(0, 0.5, 0);
 
-// --- Lights (Phase 1 minimum: HemisphereLight only)
-// Phase 2 adds DirectionalLight with shadows.
-// three.js r155+ uses physically-based light intensity units. Legacy "1"
-// corresponds to ~PI in the new units; tune by feel rather than the old numbers.
-const hemi = new THREE.HemisphereLight(0xf3e8d2, 0x9e8a68, 2.6);
-scene.add(hemi);
-
-// --- Grid floor (drafting paper: 10cm minor, 1m major) ---
-// 10x10m extent; same extent on both grids, different division density.
-const inkColor = cssColor("--ink");
-
-const majorGrid = new THREE.GridHelper(10, 10, inkColor, inkColor);
-const majorMat = majorGrid.material as THREE.LineBasicMaterial;
-majorMat.opacity = 0.35;
-majorMat.transparent = true;
-majorMat.toneMapped = false; // unlit indicator; skip ACES so ink doesn't crush to black
-scene.add(majorGrid);
-
-const minorGrid = new THREE.GridHelper(10, 100, inkColor, inkColor);
-const minorMat = minorGrid.material as THREE.LineBasicMaterial;
-minorMat.opacity = 0.12;
-minorMat.transparent = true;
-minorMat.toneMapped = false;
-minorGrid.position.y = -0.001; // avoid z-fighting with the major grid
-scene.add(minorGrid);
-
-// --- Placeholder cube (1m cube on the floor, first swatch) ---
+// --- Placeholder cube (Phase 3 replaces with user-added objects) ---
 const cube = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
   new THREE.MeshStandardMaterial({
@@ -64,6 +40,7 @@ const cube = new THREE.Mesh(
   }),
 );
 cube.position.set(0, 0.5, 0); // sit on floor (y = h/2)
+cube.castShadow = true;
 scene.add(cube);
 
 // --- Lifecycle attachments ---
