@@ -66,6 +66,17 @@ export function loadState(): LoadedState | null {
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
+// Strip blob URLs before saving — they're tied to the current document and
+// don't survive a refresh. Better to drop modelUrl entirely than to persist
+// a dangling reference that triggers load errors on next boot.
+function stripBlobModelUrls(objects: RoomObject[]): RoomObject[] {
+  return objects.map((o) =>
+    o.modelUrl && o.modelUrl.startsWith("blob:")
+      ? { ...o, modelUrl: undefined }
+      : o,
+  );
+}
+
 export function saveState(state: LoadedState): void {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
@@ -73,7 +84,7 @@ export function saveState(state: LoadedState): void {
       const payload: Persisted = {
         version: SCHEMA_VERSION,
         room: state.room,
-        objects: state.objects,
+        objects: stripBlobModelUrls(state.objects),
         fog: state.fog,
       };
       localStorage.setItem(KEY, JSON.stringify(payload));
@@ -99,7 +110,7 @@ export function flushSave(state: LoadedState): void {
     const payload: Persisted = {
       version: SCHEMA_VERSION,
       room: state.room,
-      objects: state.objects,
+      objects: stripBlobModelUrls(state.objects),
       fog: state.fog,
     };
     localStorage.setItem(KEY, JSON.stringify(payload));

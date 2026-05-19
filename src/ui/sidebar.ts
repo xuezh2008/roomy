@@ -148,10 +148,40 @@ export function attachSidebar(
             selectedId: s.selectedId === o.id ? null : s.selectedId,
             objects: s.objects.filter((x) => x.id !== o.id),
           })),
+        // onLoadModel: open file picker, set modelUrl on the object
+        () => pickModelFile(o.id),
       ),
     );
     objectsSection.list.replaceChildren(...rows);
   };
+
+  // Hidden file input reused across rows. Clicking "load" on a row sets
+  // pendingPickId so the change handler knows which object receives the URL.
+  let pendingPickId: string | null = null;
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = ".glb,.gltf,model/gltf-binary,model/gltf+json";
+  fileInput.hidden = true;
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = "";
+    if (!file || !pendingPickId) return;
+    const url = URL.createObjectURL(file);
+    const id = pendingPickId;
+    pendingPickId = null;
+    store.set((s) => ({
+      ...s,
+      objects: s.objects.map((o) =>
+        o.id === id ? { ...o, modelUrl: url } : o,
+      ),
+    }));
+  });
+  sidebar.appendChild(fileInput);
+
+  function pickModelFile(objectId: string) {
+    pendingPickId = objectId;
+    fileInput.click();
+  }
 
   // Initial paint
   renderRoom(store.get());
@@ -289,10 +319,12 @@ function buildObjectRow(
   selected: boolean,
   onClick: () => void,
   onDelete: () => void,
+  onLoadModel: () => void,
 ): HTMLElement {
   const row = document.createElement("button");
   row.type = "button";
   row.className = "object-row" + (selected ? " selected" : "");
+  if (obj.modelUrl) row.classList.add("has-model");
   row.dataset.id = obj.id;
   row.addEventListener("click", () => {
     onClick();
@@ -310,17 +342,30 @@ function buildObjectRow(
   dims.className = "object-dims";
   dims.textContent = `${cm(obj.dims.w)}×${cm(obj.dims.h)}×${cm(obj.dims.d)}`;
 
+  const load = document.createElement("button");
+  load.type = "button";
+  load.className = "object-row__load";
+  load.setAttribute(
+    "aria-label",
+    obj.modelUrl ? `Replace model for ${obj.name}` : `Load model for ${obj.name}`,
+  );
+  load.textContent = obj.modelUrl ? "glb" : "+glb";
+  load.addEventListener("click", (e) => {
+    e.stopPropagation();
+    onLoadModel();
+  });
+
   const del = document.createElement("button");
   del.type = "button";
   del.className = "object-row__delete";
   del.setAttribute("aria-label", `Delete ${obj.name}`);
   del.textContent = "×";
   del.addEventListener("click", (e) => {
-    e.stopPropagation(); // don't fire row click first
+    e.stopPropagation();
     onDelete();
   });
 
-  row.append(swatch, name, dims, del);
+  row.append(swatch, name, dims, load, del);
   return row;
 }
 

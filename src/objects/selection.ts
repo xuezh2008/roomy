@@ -4,18 +4,47 @@ import type { RoomyState } from "./catalog";
 import type { ObjectsBridge } from "./bridge";
 import { cssColor } from "../lifecycle/cssVar";
 
-// Selection visual: BoxHelper outline + emissive boost on the selected mesh.
-// Listens to store.selectedId. Drafting red on cream reads as "pencil here".
+// Selection visual: BoxHelper outline + emissive boost. Works on both
+// placeholder box meshes and loaded glTF groups — traverses Group children
+// to apply emissive consistently across multi-mesh models.
 
 const EMISSIVE_INTENSITY = 0.08;
+const ZERO = new THREE.Color(0x000000);
 
 export interface SelectionHandle {
-  update: () => void; // call from RAF so BoxHelper tracks transform changes
+  update: () => void;
   detach: () => void;
 }
 
 export interface SelectionHooks {
-  onSelectionChange?: (mesh: THREE.Mesh | null) => void;
+  onSelectionChange?: (object: THREE.Object3D | null) => void;
+}
+
+function setEmissive(
+  object: THREE.Object3D,
+  color: THREE.Color,
+  intensity: number,
+): void {
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const mat = child.material;
+    if (Array.isArray(mat)) {
+      for (const m of mat) applyEmissive(m, color, intensity);
+    } else {
+      applyEmissive(mat, color, intensity);
+    }
+  });
+}
+
+function applyEmissive(
+  mat: THREE.Material,
+  color: THREE.Color,
+  intensity: number,
+): void {
+  if (!("emissive" in mat) || !("emissiveIntensity" in mat)) return;
+  const m = mat as THREE.MeshStandardMaterial;
+  m.emissive.copy(color);
+  m.emissiveIntensity = intensity;
 }
 
 export function attachSelectionVisual({
@@ -30,7 +59,7 @@ export function attachSelectionVisual({
 } & SelectionHooks): SelectionHandle {
   const accent = cssColor("--accent");
   let helper: THREE.BoxHelper | null = null;
-  let attachedMesh: THREE.Mesh | null = null;
+  let attached: THREE.Object3D | null = null;
 
   const detachFromCurrent = () => {
     if (helper) {
@@ -39,46 +68,36 @@ export function attachSelectionVisual({
       (helper.material as THREE.Material).dispose();
       helper = null;
     }
-    if (attachedMesh) {
-      const mat = attachedMesh.material as THREE.MeshStandardMaterial;
-      mat.emissiveIntensity = 0;
-      attachedMesh = null;
+    if (attached) {
+      setEmissive(attached, ZERO, 0);
+      attached = null;
     }
   };
 
   const sync = (state: RoomyState) => {
     const id = state.selectedId;
-    const nextMesh = id ? bridge.meshById.get(id) ?? null : null;
-    if (nextMesh === attachedMesh) return; // no change
+    const next = id ? bridge.meshById.get(id) ?? null : null;
+    if (next === attached) return;
 
     detachFromCurrent();
 
-    if (nextMesh) {
-      const mat = nextMesh.material as THREE.MeshStandardMaterial;
-      mat.emissive.copy(accent);
-      mat.emissiveIntensity = EMISSIVE_INTENSITY;
+    if (next) {
+      setEmissive(next, accent, EMISSIVE_INTENSITY);
 
-      helper = new THREE.BoxHelper(nextMesh, accent);
+      helper = new THREE.BoxHelper(next, accent);
       const lineMat = helper.material as THREE.LineBasicMaterial;
-      lineMat.toneMapped = false; // unlit indicator
-      lineMat.linewidth = 2; // honored only on platforms that support it; cheap to set
+      lineMat.toneMapped = false;
+      lineMat.linewidth = 2;
       scene.add(helper);
 
-      attachedMesh = nextMesh;
+      attached = next;
     }
 
-    onSelectionChange?.(nextMesh);
+    onSelectionChange?.(next);
   };
 
-  // Initial paint + subscribe.
   sync(store.get());
   const unsub = store.subscribe(sync);
-
-  // Also re-sync when bridge meshes change (e.g., delete reorders meshById).
-  // We accomplish this by re-running sync inside the store subscriber, which
-  // already fires whenever store changes. The bridge updates BEFORE selection
-  // visual because both subscribe to the same store and listeners are called
-  // in insertion order — bridge first (attached earlier in main.ts).
 
   return {
     update() {
