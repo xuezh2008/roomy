@@ -11,6 +11,7 @@ import { attachKeyboard } from "./ui/keyboard";
 import { attachOrbit } from "./ui/orbit";
 import { attachTransformGizmo } from "./ui/transformGizmo";
 import { attachRaycaster } from "./ui/raycaster";
+import { attachCameraPanel } from "./ui/cameraPanel";
 import { buildScene } from "./scene";
 import { createStore } from "./state/store";
 import { attachObjectsBridge } from "./objects/bridge";
@@ -86,8 +87,13 @@ const detachRaycaster = attachRaycaster({
   isGizmoRecentlyDragged: () => gizmo.isRecentlyDragged() || gizmo.isDragging(),
 });
 
-// --- Sidebar + keyboard ---
+// --- Sidebar + camera panel + keyboard ---
 const sidebar = attachSidebar(app, store);
+const cameraPanel = attachCameraPanel({
+  host: sidebar.root,
+  camera,
+  orbit: orbit.controls,
+});
 const detachKeyboard = attachKeyboard({
   onAddObject: () => sidebar.focusNameInput(),
   onRotate: () => {
@@ -134,6 +140,7 @@ function frame() {
   rafHandle = 0;
   if (!visibility.isVisible()) return;
   orbit.update(); // required for damping
+  cameraPanel.update(); // tweens + readout
   selectionVisual.update(); // keep BoxHelper tracking selected mesh transforms
   renderer.render(scene, camera);
   schedule();
@@ -155,6 +162,7 @@ if (import.meta.hot) {
     visibility.detach();
     mobile.detach();
     detachKeyboard();
+    cameraPanel.detach();
     sidebar.detach();
     detachRaycaster();
     selectionVisual.detach();
