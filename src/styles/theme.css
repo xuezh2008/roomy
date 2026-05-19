@@ -97,10 +97,15 @@ body {
 }
 
 #app {
-  position: relative;
   width: 100%;
   height: 100%;
-  display: block;
+  display: grid;
+  grid-template-columns: 1fr var(--sidebar-w);
+}
+
+.canvas-shell {
+  position: relative;
+  overflow: hidden;
 }
 
 canvas {
@@ -109,6 +114,13 @@ canvas {
   height: 100%;
   touch-action: none; /* canvas owns its gestures; no native scroll/zoom */
   outline: none;
+}
+
+/* Mobile: sidebar stacks under the canvas. Bottom-sheet states + drag come
+ * in Phase 3b; this is the v1 fallback. */
+html[data-mode="mobile"] #app {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
 }
 
 /* Mobile mode swap stub. The body gets [data-mode='mobile'|'desktop']

@@ -20,6 +20,14 @@ export function cssNumber(name: string, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+// Raw string getter for the CSS value (no three.js conversion). Used to
+// serialize colors as hex for storage so the render layer can resolve to
+// THREE.Color at the boundary via setStyle.
+export function cssHex(name: string, fallback = "#ffffff"): string {
+  const value = root().getPropertyValue(name).trim();
+  return value || fallback;
+}
+
 // Useful when a CSS var holds a rgba() value and you want only the alpha component
 // (three.js setStyle drops alpha — read it separately if you need it).
 export function cssAlpha(name: string, fallback = 1): number {

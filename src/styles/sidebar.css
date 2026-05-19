@@ -1,0 +1,257 @@
+/* Drafting-table sidebar — DESIGN.md §5.
+ * Lives at the right edge of #app via the layout grid (see theme.css).
+ * Mobile (data-mode='mobile') swaps to a peek-state bottom sheet stub;
+ * full bottom-sheet states come in Phase 3b. */
+
+.sidebar {
+  background: var(--paper);
+  border-left: var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 16px 80px; /* extra bottom padding so the AI drawer (Phase 7) won't overlap */
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+  /* The drafting-paper feel: subtle warm cream, no drop shadow. */
+}
+
+.sidebar-section + .sidebar-section {
+  margin-top: var(--section-gap);
+  padding-top: var(--section-gap);
+  border-top: 1px dashed var(--rule);
+}
+
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.section-heading .section-suffix {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  text-transform: lowercase;
+}
+
+.section-heading .section-count {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* --- ROOM section --- */
+
+.room-display {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.chip-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.chip-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+
+.chip-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* --- NEW OBJECT form --- */
+
+.new-object-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.new-object-form input[type="text"],
+.new-object-form input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+}
+
+.new-object-form input[type="text"]:focus,
+.new-object-form input[type="number"]:focus {
+  border-color: var(--ink);
+}
+
+.new-object-form input[type="number"] {
+  font-family: var(--font-mono);
+}
+
+.dims-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.dim-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dim-input > span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dim-input input {
+  text-align: center;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.color-swatch {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 80ms ease-out, border-color 80ms ease-out;
+}
+
+.color-swatch:hover {
+  transform: translateY(-1px);
+  border-color: var(--ink);
+}
+
+.color-swatch.picked {
+  border: 2px solid var(--ink);
+}
+
+.btn-primary {
+  padding: 10px 12px;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  border: 1px solid var(--btn-primary-bg);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.form-error {
+  padding: 8px 10px;
+  background: var(--accent-soft);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+}
+
+/* --- OBJECTS list --- */
+
+.objects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.objects-empty {
+  padding: 14px 12px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.object-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+}
+
+.object-swatch {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+.object-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-dims {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+/* --- Mobile (Phase 3b will replace with bottom-sheet) --- */
+
+html[data-mode="mobile"] .sidebar {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: auto;
+  max-height: 50dvh;
+  border-left: none;
+  border-top: var(--border);
+  padding: 14px 14px 24px;
+}
