@@ -19,6 +19,37 @@ dist-ssr
 public/models/*.glb
 public/models/*.gltf
 
+# Internal handoff / planning artifacts (personal paths inside)
+DESIGN_HANDOFF.md
+*.handoff.md
+
+# AI editor / agent scratch
+.cursor/
+.aider*
+.continue/
+.claude/
+
+# Build / cache
+*.tsbuildinfo
+.cache/
+tmp/
+temp/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# OS (extras)
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Certs / secrets safety net
+*.pem
+*.key
+*.p12
+*.pfx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
