@@ -36,13 +36,33 @@ export function attachSidebar(
   sidebar.append(roomSection.el, newObjectSection.el, objectsSection.el);
   host.appendChild(sidebar);
 
-  // --- Wire ROOM section (readonly display from store) ---
+  // --- Wire ROOM section (editable; commits on change/blur) ---
   const renderRoom = (state: RoomyState) => {
     const r = state.room;
-    roomSection.wChip.textContent = `${Math.round(r.width * 100)}`;
-    roomSection.dChip.textContent = `${Math.round(r.depth * 100)}`;
-    roomSection.hChip.textContent = `${Math.round(r.height * 100)}`;
+    // Don't clobber the value the user is mid-typing.
+    if (document.activeElement !== roomSection.wInput) {
+      roomSection.wInput.value = String(Math.round(r.width * 100));
+    }
+    if (document.activeElement !== roomSection.dInput) {
+      roomSection.dInput.value = String(Math.round(r.depth * 100));
+    }
+    if (document.activeElement !== roomSection.hInput) {
+      roomSection.hInput.value = String(Math.round(r.height * 100));
+    }
   };
+
+  const commitRoom = () => {
+    const wCm = clampCm(roomSection.wInput.value, 100, 3000);
+    const dCm = clampCm(roomSection.dInput.value, 100, 3000);
+    const hCm = clampCm(roomSection.hInput.value, 200, 1000);
+    store.set((s) => ({
+      ...s,
+      room: { width: wCm / 100, depth: dCm / 100, height: hCm / 100 },
+    }));
+  };
+  roomSection.wInput.addEventListener("change", commitRoom);
+  roomSection.dInput.addEventListener("change", commitRoom);
+  roomSection.hInput.addEventListener("change", commitRoom);
 
   // --- Wire NEW OBJECT form ---
   let pickedColor: string | null = null;
@@ -210,25 +230,43 @@ function buildRoomSection() {
 
   const heading = document.createElement("h2");
   heading.className = "section-heading";
-  heading.append(
-    textSpan("ROOM"),
-    suffixSpan("rectangular"),
-  );
+  heading.append(textSpan("ROOM"), suffixSpan("rectangular · cm"));
 
   const body = document.createElement("div");
-  body.className = "room-display";
-  const wChip = chip("W");
-  const dChip = chip("D");
-  const hChip = chip("H");
-  body.append(wChip.row, dChip.row, hChip.row);
+  body.className = "room-dims";
+  const w = roomDimInput("W", 100, 3000);
+  const d = roomDimInput("D", 100, 3000);
+  const h = roomDimInput("H", 200, 1000);
+  body.append(w.wrap, d.wrap, h.wrap);
 
   el.append(heading, body);
   return {
     el,
-    wChip: wChip.value,
-    dChip: dChip.value,
-    hChip: hChip.value,
+    wInput: w.input,
+    dInput: d.input,
+    hInput: h.input,
   };
+}
+
+function roomDimInput(label: string, minCm: number, maxCm: number) {
+  const wrap = document.createElement("label");
+  wrap.className = "dim-input";
+  const lbl = document.createElement("span");
+  lbl.textContent = label;
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = String(minCm);
+  input.max = String(maxCm);
+  input.step = "10";
+  input.autocomplete = "off";
+  wrap.append(lbl, input);
+  return { wrap, input };
+}
+
+function clampCm(raw: string, lo: number, hi: number): number {
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return lo;
+  return Math.max(lo, Math.min(hi, n));
 }
 
 function buildNewObjectSection() {
@@ -382,19 +420,6 @@ function suffixSpan(s: string): HTMLSpanElement {
   sp.className = "section-suffix";
   sp.textContent = s;
   return sp;
-}
-
-function chip(label: string) {
-  const row = document.createElement("div");
-  row.className = "chip-row";
-  const lbl = document.createElement("span");
-  lbl.className = "chip-label";
-  lbl.textContent = label;
-  const val = document.createElement("span");
-  val.className = "chip-value";
-  val.textContent = "—";
-  row.append(lbl, val);
-  return { row, value: val };
 }
 
 function dimInput(label: string, defaultCm: number) {

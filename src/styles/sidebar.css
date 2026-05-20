@@ -53,32 +53,10 @@
 
 /* --- ROOM section --- */
 
-.room-display {
+.room-dims {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-}
-
-.chip-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 6px 8px;
-  background: var(--input-bg);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-}
-
-.chip-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--ink-soft);
-}
-
-.chip-value {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--ink);
 }
 
 /* --- NEW OBJECT form --- */
@@ -133,7 +111,31 @@
 }
 
 .dim-input input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
   text-align: center;
+}
+
+.dim-input input:focus {
+  border-color: var(--ink);
+}
+
+/* Hide spinner arrows on number inputs — looks cleaner with monospace */
+.dim-input input::-webkit-outer-spin-button,
+.dim-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.dim-input input {
+  -moz-appearance: textfield;
 }
 
 .swatches {

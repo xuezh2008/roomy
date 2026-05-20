@@ -42,7 +42,8 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 canvasShell.appendChild(renderer.domElement);
 
 // --- Scene (room shell + lights) ---
-const { scene } = buildScene();
+const sceneSetup = buildScene();
+const { scene } = sceneSetup;
 
 // --- Camera (iso-ish framing; OrbitControls owns it from here) ---
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
@@ -71,6 +72,13 @@ const unsubscribePersist = store.subscribe((state) =>
 // AI settings (API keys + provider preference) live in their own
 // localStorage entry, mutable via the settings modal.
 let aiSettings: AISettings = loadSettings();
+
+// React to room-dimension changes from the sidebar form. scene.ts disposes
+// the prior room geometry + re-tunes the sun's shadow frustum.
+sceneSetup.rebuildRoom(store.get().room);
+const unsubscribeRoom = store.subscribe((state, prev) => {
+  if (state.room !== prev.room) sceneSetup.rebuildRoom(state.room);
+});
 
 // --- Camera controls ---
 const orbit = attachOrbit(camera, renderer.domElement);
@@ -211,6 +219,7 @@ if (import.meta.hot) {
     cameraPanel.detach();
     sidebar.detach();
     detachFogBridge();
+    unsubscribeRoom();
     detachRaycaster();
     selectionVisual.detach();
     gizmo.detach();
