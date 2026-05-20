@@ -42,8 +42,9 @@ export async function callGemini(req: RenderRequest): Promise<Blob> {
   const data: GeminiResponse = await response.json();
 
   if (!response.ok || data.error) {
-    const msg = data.error?.message ?? `HTTP ${response.status}`;
-    throw new Error(`Gemini: ${msg}`);
+    const apiMsg = data.error?.message ?? `HTTP ${response.status}`;
+    const code = data.error?.code ?? response.status;
+    throw new Error(humanizeGeminiError(code, apiMsg));
   }
 
   const parts = data.candidates?.[0]?.content?.parts ?? [];
@@ -64,6 +65,34 @@ export async function callGemini(req: RenderRequest): Promise<Blob> {
   throw new Error(
     `Gemini returned no image${text ? ` — model said: ${text}` : ""}`,
   );
+}
+
+// Pull the first useful sentence out of Gemini's verbose error responses and
+// give it actionable framing. The raw API message dumps doc URLs + per-metric
+// breakdowns that don't help anyone fix the problem.
+function humanizeGeminiError(code: number, raw: string): string {
+  const isQuota = code === 429 || /quota/i.test(raw) || /rate limit/i.test(raw);
+  const isFreeTierZero = /limit:\s*0/i.test(raw);
+
+  if (isQuota && isFreeTierZero) {
+    return (
+      "Gemini: image generation is not included in the free tier on this key.\n" +
+      "Fix: enable billing at https://aistudio.google.com/apikey — or switch the provider toggle to OpenAI."
+    );
+  }
+  if (isQuota) {
+    const retry = raw.match(/retry in ([\d.]+)\s*s/i);
+    return `Gemini: rate limited${retry ? ` (retry in ${Math.ceil(parseFloat(retry[1]))} s)` : ""}. Try again shortly or switch to OpenAI.`;
+  }
+  if (code === 400 && /api[\s_-]?key/i.test(raw)) {
+    return "Gemini: API key rejected. Generate one at https://aistudio.google.com/apikey and paste it via the ⚙ button.";
+  }
+  if (code === 401 || code === 403) {
+    return "Gemini: API key isn't authorized for this model. Check key permissions at https://aistudio.google.com/apikey.";
+  }
+  // Default: keep the first sentence of the raw message and drop the rest.
+  const firstSentence = raw.split(/(?<=[.!?])\s/, 1)[0] ?? raw;
+  return `Gemini: ${firstSentence}`;
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {

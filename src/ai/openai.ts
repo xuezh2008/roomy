@@ -33,8 +33,8 @@ export async function callOpenAI(req: RenderRequest): Promise<Blob> {
   const data: OpenAIResponse = await response.json();
 
   if (!response.ok || data.error) {
-    const msg = data.error?.message ?? `HTTP ${response.status}`;
-    throw new Error(`OpenAI: ${msg}`);
+    const apiMsg = data.error?.message ?? `HTTP ${response.status}`;
+    throw new Error(humanizeOpenAIError(response.status, apiMsg));
   }
 
   const first = data.data?.[0];
@@ -47,6 +47,27 @@ export async function callOpenAI(req: RenderRequest): Promise<Blob> {
   }
 
   throw new Error("OpenAI returned no image");
+}
+
+function humanizeOpenAIError(code: number, raw: string): string {
+  if (code === 429 || /quota/i.test(raw) || /rate limit/i.test(raw)) {
+    return "OpenAI: rate limit or quota exceeded. Check usage at https://platform.openai.com/usage, or switch to Gemini.";
+  }
+  if (code === 401 || code === 403 || /api[\s_-]?key|invalid/i.test(raw)) {
+    return "OpenAI: API key rejected. Get one at https://platform.openai.com/api-keys and paste it via the ⚙ button.";
+  }
+  if (/verif/i.test(raw)) {
+    // gpt-image-1 requires "Verified Organization" status on the OpenAI account.
+    return (
+      "OpenAI: gpt-image-1 requires a verified organization on your account.\n" +
+      "Fix: complete verification at https://platform.openai.com/settings/organization/general — or switch to Gemini."
+    );
+  }
+  if (code === 400 && /image/i.test(raw)) {
+    return `OpenAI: image input rejected — ${raw.split(/(?<=[.!?])\s/, 1)[0] ?? raw}`;
+  }
+  const firstSentence = raw.split(/(?<=[.!?])\s/, 1)[0] ?? raw;
+  return `OpenAI: ${firstSentence}`;
 }
 
 function base64ToBlob(b64: string, mime: string): Blob {

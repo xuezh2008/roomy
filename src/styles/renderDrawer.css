@@ -281,7 +281,19 @@
 
 .render-result-status {
   font-size: 11px;
-  color: rgba(244, 235, 217, 0.6);
+  color: rgba(244, 235, 217, 0.7);
+  text-align: center;
+  max-width: 560px;
+  line-height: 1.5;
+  white-space: pre-wrap; /* preserve \n in humanized errors */
+  padding: 0 16px;
+}
+
+.render-result-status a,
+.render-result-status code {
+  color: var(--paper);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .render-result-img {
