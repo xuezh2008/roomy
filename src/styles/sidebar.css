@@ -563,13 +563,17 @@
   opacity: 0.5;
 }
 
-/* --- Mobile (Phase 3b will replace with bottom-sheet) --- */
+/* --- Mobile — sidebar stacks below canvas in grid row 2 --- */
+/* Drawer is absolute at the bottom of canvas-shell (row 1); sidebar sits in
+ * row 2 underneath. Capped to 50dvh and scrollable so the canvas always has
+ * at least half the viewport. Full bottom-sheet states with peek/half/full
+ * drag are a Phase 8 follow-up. */
 
 html[data-mode="mobile"] .sidebar {
-  position: fixed;
-  inset: auto 0 0 0;
+  position: static;
   height: auto;
   max-height: 50dvh;
+  overflow-y: auto;
   border-left: none;
   border-top: var(--border);
   padding: 14px 14px 24px;

@@ -482,7 +482,10 @@
 }
 
 html[data-mode="mobile"] .render-drawer[data-state="expanded"] {
-  height: 80%;
+  /* Expanded drawer takes most of canvas-shell vertically. canvas-shell is
+   * already row 1 (1fr) of the mobile grid, so the sidebar in row 2 stays
+   * accessible below — drawer doesn't cover the sidebar. */
+  height: 75%;
 }
 html[data-mode="mobile"] .render-expanded {
   grid-template-columns: 1fr;

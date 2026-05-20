@@ -1,10 +1,11 @@
 // Viewport-mode detection. Sets data-mode='mobile' | 'desktop' on <html>.
-// Engages mobile mode when EITHER:
-//   - viewport width <= 1023px, OR
-//   - primary pointer is coarse (touch)
-// Comma in a media query is OR; matches DESIGN.md §11 activation rules.
+// Engages mobile mode when viewport width <= 1023px.
+//
+// Touch gesture handling is a separate concern (pointer events fired by the
+// raycaster + OrbitControls already cover it). We don't conflate the two:
+// a touchscreen laptop at 1920×1080 stays in desktop layout.
 
-const MOBILE_MEDIA = "(max-width: 1023px), (pointer: coarse)";
+const MOBILE_MEDIA = "(max-width: 1023px)";
 
 export type ViewportMode = "mobile" | "desktop";
 
