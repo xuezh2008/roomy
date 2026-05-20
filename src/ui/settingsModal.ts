@@ -186,6 +186,7 @@ export function attachSettingsModal({
 
   saveBtn.addEventListener("click", () => {
     setSettings({
+      ...getSettings(),
       geminiKey: geminiInput.value.trim(),
       openaiKey: openaiInput.value.trim(),
       preferredProvider: currentProvider,
@@ -196,6 +197,7 @@ export function attachSettingsModal({
   clearBtn.addEventListener("click", () => {
     if (!confirm("Clear both API keys from this browser?")) return;
     setSettings({
+      ...getSettings(),
       geminiKey: "",
       openaiKey: "",
       preferredProvider: currentProvider,
