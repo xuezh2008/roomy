@@ -565,6 +565,45 @@
   opacity: 0.5;
 }
 
+/* --- FILES section (save / load .json layout) --- */
+
+.files-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.btn-ghost {
+  padding: 8px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 80ms ease-out, background-color 80ms ease-out;
+}
+
+.btn-ghost:hover {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+
+.files-status {
+  margin-top: 6px;
+  min-height: 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+
+.files-status.error {
+  color: var(--accent);
+}
+
 /* --- Mobile — sidebar stacks below canvas in grid row 2 --- */
 /* Drawer is absolute at the bottom of canvas-shell (row 1); sidebar sits in
  * row 2 underneath. Capped to 50dvh and scrollable so the canvas always has

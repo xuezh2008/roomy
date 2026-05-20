@@ -248,14 +248,31 @@ export function attachRenderDrawer({
 
   async function doRender() {
     if (inflight) return;
-    const settings = getSettings();
-    if (!hasKey(settings, currentProvider)) {
-      onOpenSettings(currentProvider);
-      return;
-    }
     const prompt = promptArea.value.trim();
     if (!prompt) {
       showError("Write a prompt first.");
+      return;
+    }
+
+    // Cache lookup BEFORE API check: an identical (prompt, provider) pair
+    // already in history means we have the answer locally. Free, instant,
+    // and works even with no API key set.
+    const cached = store
+      .get()
+      .renders.find(
+        (r) => r.prompt === prompt && r.provider === currentProvider,
+      );
+    if (cached) {
+      const ageS = Math.round((Date.now() - cached.createdAt) / 1000);
+      const ageLabel = formatAge(ageS);
+      showResult(cached.imageDataUrl, `${cached.provider} · cached (${ageLabel})`);
+      statusText.textContent = "idle";
+      return;
+    }
+
+    const settings = getSettings();
+    if (!hasKey(settings, currentProvider)) {
+      onOpenSettings(currentProvider);
       return;
     }
     inflight = true;
@@ -316,6 +333,13 @@ export function attachRenderDrawer({
       drawer.remove();
     },
   };
+}
+
+function formatAge(seconds: number): string {
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h ago`;
+  return `${Math.round(seconds / 86400)}d ago`;
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {

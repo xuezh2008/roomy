@@ -51,7 +51,7 @@ export interface Render {
   createdAt: number;
 }
 
-export const MAX_RENDER_HISTORY = 4;
+export const MAX_RENDER_HISTORY = 6;
 
 // Helper: build the auto-generated prompt body from the snapshot scene.
 // User can edit anything; this is just the seed.

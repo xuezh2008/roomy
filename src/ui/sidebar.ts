@@ -8,6 +8,7 @@ import {
   type RoomyState,
 } from "../objects/catalog";
 import { cssHex } from "../lifecycle/cssVar";
+import { exportLayout, importLayout } from "../persistence/layoutFile";
 
 // Drafting-table sidebar: ROOM (readonly chips), NEW OBJECT form, OBJECTS list.
 // All list content goes through textContent — never innerHTML — to neutralize
@@ -32,9 +33,50 @@ export function attachSidebar(
   const roomSection = buildRoomSection();
   const newObjectSection = buildNewObjectSection();
   const objectsSection = buildObjectsListSection();
+  const filesSection = buildFilesSection();
 
-  sidebar.append(roomSection.el, newObjectSection.el, objectsSection.el);
+  sidebar.append(
+    roomSection.el,
+    newObjectSection.el,
+    objectsSection.el,
+    filesSection.el,
+  );
   host.appendChild(sidebar);
+
+  // --- Wire FILES section (save + load JSON layout) ---
+  filesSection.saveBtn.addEventListener("click", () => {
+    const state = store.get();
+    exportLayout({
+      room: state.room,
+      objects: state.objects,
+      fog: state.fog,
+    });
+  });
+
+  filesSection.loadInput.addEventListener("change", async () => {
+    const file = filesSection.loadInput.files?.[0];
+    filesSection.loadInput.value = "";
+    if (!file) return;
+    try {
+      const layout = await importLayout(file);
+      store.set((s) => ({
+        ...s,
+        room: layout.room,
+        objects: layout.objects,
+        fog: layout.fog,
+        selectedId: null,
+      }));
+      filesSection.status.textContent = `loaded ${file.name}`;
+      filesSection.status.classList.remove("error");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      filesSection.status.textContent = msg;
+      filesSection.status.classList.add("error");
+    }
+  });
+  filesSection.loadBtn.addEventListener("click", () => {
+    filesSection.loadInput.click();
+  });
 
   // --- Wire ROOM section (editable; commits on change/blur) ---
   const renderRoom = (state: RoomyState) => {
@@ -323,6 +365,41 @@ function buildNewObjectSection() {
     submit,
     errorBox,
   };
+}
+
+function buildFilesSection() {
+  const el = document.createElement("section");
+  el.className = "sidebar-section";
+
+  const heading = document.createElement("h2");
+  heading.className = "section-heading";
+  heading.append(textSpan("FILES"), suffixSpan("json"));
+
+  const row = document.createElement("div");
+  row.className = "files-row";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "btn-ghost";
+  saveBtn.textContent = "↓ Save layout";
+
+  const loadBtn = document.createElement("button");
+  loadBtn.type = "button";
+  loadBtn.className = "btn-ghost";
+  loadBtn.textContent = "↑ Load layout";
+
+  const loadInput = document.createElement("input");
+  loadInput.type = "file";
+  loadInput.accept = ".json,application/json";
+  loadInput.hidden = true;
+
+  row.append(saveBtn, loadBtn);
+
+  const status = document.createElement("div");
+  status.className = "files-status";
+
+  el.append(heading, row, status, loadInput);
+  return { el, saveBtn, loadBtn, loadInput, status };
 }
 
 function buildObjectsListSection() {
