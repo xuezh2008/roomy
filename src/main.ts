@@ -138,6 +138,10 @@ const renderDrawer = attachRenderDrawer({
   host: canvasShell,
   store,
   getSettings: () => aiSettings,
+  setSettings: (next) => {
+    aiSettings = next;
+    saveSettings(next);
+  },
   onOpenSettings: (focus) => settingsModal.open(focus),
   snapshotArgs: () => ({
     scene,

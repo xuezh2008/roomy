@@ -26,9 +26,9 @@
   height: 56px;
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto auto 1fr auto auto;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 0 16px;
 }
 
@@ -126,7 +126,8 @@
   border-color: var(--paper);
 }
 
-.render-settings-btn {
+.render-settings-btn,
+.render-hide-btn {
   background: transparent;
   border: 1px solid rgba(244, 235, 217, 0.2);
   color: var(--paper);
@@ -135,10 +136,67 @@
   font-size: 14px;
   border-radius: var(--radius);
   cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
 }
 
-.render-settings-btn:hover {
+.render-settings-btn:hover,
+.render-hide-btn:hover {
   background: rgba(244, 235, 217, 0.08);
+}
+
+/* --- Floating action button (visible only when drawer is hidden) --- */
+
+.render-drawer-fab {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1.5px solid var(--paper);
+  border-radius: 22px;
+  cursor: pointer;
+  display: none; /* JS toggles to grid when drawer is hidden */
+  place-items: center;
+  gap: 2px;
+  z-index: 10;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  box-shadow: 0 2px 0 rgba(28, 46, 74, 0.18);
+  transition: transform 80ms ease-out;
+}
+
+.render-drawer-fab:hover {
+  transform: translateY(-1px);
+}
+
+.render-drawer-fab:active {
+  transform: translateY(1px);
+}
+
+.render-fab-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.render-fab-label {
+  display: block;
+  line-height: 1;
+}
+
+/* When drawer is hidden, canvas-shell gets its bottom padding back. */
+.canvas-shell {
+  padding-bottom: 56px;
+}
+.canvas-shell[data-drawer-hidden="true"] {
+  padding-bottom: 0;
 }
 
 /* --- Expanded pane --- */
@@ -581,12 +639,6 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 6px;
-}
-
-/* Move the canvas-shell up so the drawer doesn't cover it entirely
- * when the drawer is collapsed. The collapsed strip is 56px tall. */
-.canvas-shell {
-  padding-bottom: 56px;
 }
 
 html[data-mode="mobile"] .render-drawer[data-state="expanded"] {

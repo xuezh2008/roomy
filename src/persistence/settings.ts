@@ -10,12 +10,15 @@ export interface AISettings {
   geminiKey: string;
   openaiKey: string;
   preferredProvider: Provider;
+  /** Whether the bottom render drawer is hidden (showing only the FAB). */
+  drawerHidden: boolean;
 }
 
 const DEFAULTS: AISettings = {
   geminiKey: "",
   openaiKey: "",
   preferredProvider: "gemini",
+  drawerHidden: false,
 };
 
 export function loadSettings(): AISettings {

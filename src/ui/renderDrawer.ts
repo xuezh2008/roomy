@@ -22,18 +22,19 @@ export function attachRenderDrawer({
   host,
   store,
   getSettings,
+  setSettings,
   onOpenSettings,
   snapshotArgs,
 }: {
   host: HTMLElement;
   store: Store<RoomyState>;
   getSettings: () => AISettings;
+  setSettings: (next: AISettings) => void;
   onOpenSettings: (focus?: Provider) => void;
   snapshotArgs: () => Omit<SnapshotArgs, "state">;
 }): RenderDrawerHandle {
   const drawer = document.createElement("aside");
   drawer.className = "render-drawer";
-  drawer.dataset.state = "collapsed";
 
   drawer.innerHTML = `
     <div class="render-collapsed">
@@ -44,6 +45,7 @@ export function attachRenderDrawer({
       <button type="button" class="render-cta">● Render with AI</button>
       <div class="render-history-rail"></div>
       <button type="button" class="render-settings-btn" aria-label="API keys">⚙</button>
+      <button type="button" class="render-hide-btn" aria-label="Hide drawer">▾</button>
     </div>
     <div class="render-expanded" hidden>
       <div class="render-prompt-pane">
@@ -78,6 +80,15 @@ export function attachRenderDrawer({
 
   host.appendChild(drawer);
 
+  // Floating action button — visible only when the drawer is hidden.
+  // Sibling of the drawer so it survives drawer's display: none.
+  const fab = document.createElement("button");
+  fab.type = "button";
+  fab.className = "render-drawer-fab";
+  fab.setAttribute("aria-label", "Show AI render drawer");
+  fab.innerHTML = `<span class="render-fab-pip"></span><span class="render-fab-label">AI</span>`;
+  host.appendChild(fab);
+
   const collapsed = drawer.querySelector<HTMLDivElement>(".render-collapsed")!;
   const expanded = drawer.querySelector<HTMLDivElement>(".render-expanded")!;
   const cta = drawer.querySelector<HTMLButtonElement>(".render-cta")!;
@@ -86,6 +97,8 @@ export function attachRenderDrawer({
   const goBtn = drawer.querySelector<HTMLButtonElement>(".render-go")!;
   const settingsBtn =
     drawer.querySelector<HTMLButtonElement>(".render-settings-btn")!;
+  const hideBtn =
+    drawer.querySelector<HTMLButtonElement>(".render-hide-btn")!;
   const providerBtns = drawer.querySelectorAll<HTMLButtonElement>(
     ".render-provider-toggle .provider-btn",
   );
@@ -106,6 +119,36 @@ export function attachRenderDrawer({
   let currentProvider: Provider = getSettings().preferredProvider;
   let currentStyle: Style = "as-is";
   let inflight = false;
+  type DrawerState = "collapsed" | "expanded" | "hidden";
+  let drawerState: DrawerState = getSettings().drawerHidden
+    ? "hidden"
+    : "collapsed";
+
+  const applyState = () => {
+    drawer.dataset.state = drawerState;
+    if (drawerState === "hidden") {
+      drawer.style.display = "none";
+      fab.style.display = "grid";
+      host.dataset.drawerHidden = "true";
+    } else {
+      drawer.style.display = "";
+      fab.style.display = "none";
+      host.dataset.drawerHidden = "false";
+      if (drawerState === "expanded") {
+        expanded.hidden = false;
+        collapsed.classList.add("dimmed");
+      } else {
+        expanded.hidden = true;
+        collapsed.classList.remove("dimmed");
+      }
+    }
+  };
+
+  const persistHidden = (hidden: boolean) => {
+    const s = getSettings();
+    if (s.drawerHidden === hidden) return;
+    setSettings({ ...s, drawerHidden: hidden });
+  };
 
   // --- Style chips ---
   for (const s of STYLES) {
@@ -141,11 +184,11 @@ export function attachRenderDrawer({
   }
   setProvider(currentProvider);
 
-  // --- Open / close ---
+  // --- Open / close / hide ---
   function open() {
-    drawer.dataset.state = "expanded";
-    expanded.hidden = false;
-    collapsed.classList.add("dimmed");
+    drawerState = "expanded";
+    applyState();
+    persistHidden(false);
     // Seed the prompt area with a generated baseline IF the textarea is empty.
     if (!promptArea.value.trim()) {
       seedPromptFromSnapshot();
@@ -153,14 +196,27 @@ export function attachRenderDrawer({
     promptArea.focus();
   }
   function close() {
-    drawer.dataset.state = "collapsed";
-    expanded.hidden = true;
-    collapsed.classList.remove("dimmed");
+    drawerState = "collapsed";
+    applyState();
+  }
+  function hide() {
+    drawerState = "hidden";
+    applyState();
+    persistHidden(true);
+  }
+  function reveal() {
+    drawerState = "collapsed";
+    applyState();
+    persistHidden(false);
   }
 
   cta.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
+  hideBtn.addEventListener("click", hide);
+  fab.addEventListener("click", reveal);
   settingsBtn.addEventListener("click", () => onOpenSettings(currentProvider));
+
+  applyState();
 
   async function seedPromptFromSnapshot() {
     try {
@@ -331,6 +387,7 @@ export function attachRenderDrawer({
     detach() {
       unsubStore();
       drawer.remove();
+      fab.remove();
     },
   };
 }
