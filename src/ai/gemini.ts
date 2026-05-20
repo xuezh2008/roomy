@@ -157,6 +157,33 @@ export function humanizeGeminiError(
         "Fix: visit https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com and click Enable for the project that owns this key.",
       ].join("\n");
     }
+    // "Your project has been denied access" — this is a project-level block
+    // (Google flagged the project, or it's brand-new and not yet provisioned,
+    // or region-restricted). No key-config change fixes it — only swapping to
+    // a fresh project does.
+    if (
+      reason === "CONSUMER_INVALID" ||
+      reason === "FAILED_PRECONDITION" ||
+      /project\s+has\s+been\s+denied|project\s+denied/i.test(combined)
+    ) {
+      return [
+        "Gemini: your Google Cloud project is denied access to image generation.",
+        "",
+        "This is a PROJECT-level block — not a key-config issue. Common causes:",
+        "• Project was newly created and hasn't been fully provisioned for image models",
+        "• Image generation isn't available in your account's region",
+        "• Project was auto-flagged by Google's policy systems",
+        "",
+        "Fastest fix: create a key bound to a different project.",
+        "  1. Open https://aistudio.google.com/apikey",
+        "  2. Click 'Create API key' → choose 'Create new project' (NOT an existing one)",
+        "  3. Paste the new key here and click Test",
+        "",
+        `Google said: ${raw.slice(0, 200)}`,
+        "",
+        "Or switch to OpenAI in the provider toggle.",
+      ].join("\n");
+    }
     // Generic 401/403 with raw message + every diagnostic we can think of.
     return [
       `Gemini: ${code === 401 ? "key rejected" : "access denied"} for this model.`,
@@ -167,7 +194,8 @@ export function humanizeGeminiError(
       "• HTTP referrer restriction → add `xuezh2008.github.io/*` at https://console.cloud.google.com/apis/credentials.",
       "• API restriction → allow Generative Language API on that page.",
       "• Wrong project / API not enabled → enable at https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com.",
-      "• Or generate a fresh unrestricted key at https://aistudio.google.com/apikey.",
+      "• Project denied entirely → create a NEW project at https://aistudio.google.com/apikey ('Create new project'), use that key.",
+      "• Or switch to OpenAI.",
     ].join("\n");
   }
   const firstSentence = raw.split(/(?<=[.!?])\s/, 1)[0] ?? raw;
