@@ -44,19 +44,27 @@ export function attachSettingsModal({
     <div class="settings-key-block">
       <div class="settings-row">
         <label class="settings-label" for="gemini-key">Gemini (nano-banana)</label>
-        <input id="gemini-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
+        <div class="settings-input-wrap">
+          <input id="gemini-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
+          <button type="button" class="settings-show" data-target="gemini-key" aria-label="Show key">show</button>
+        </div>
         <button type="button" class="settings-test" data-provider="gemini">Test</button>
         <a class="settings-help" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">get a key ↗</a>
       </div>
+      <div class="settings-key-meta" data-target="gemini-key">0 chars</div>
       <div class="settings-test-result" data-provider="gemini"></div>
     </div>
     <div class="settings-key-block">
       <div class="settings-row">
         <label class="settings-label" for="openai-key">OpenAI (gpt-image-1)</label>
-        <input id="openai-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
+        <div class="settings-input-wrap">
+          <input id="openai-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
+          <button type="button" class="settings-show" data-target="openai-key" aria-label="Show key">show</button>
+        </div>
         <button type="button" class="settings-test" data-provider="openai">Test</button>
         <a class="settings-help" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">get a key ↗</a>
       </div>
+      <div class="settings-key-meta" data-target="openai-key">0 chars</div>
       <div class="settings-test-result" data-provider="openai"></div>
     </div>
     <div class="settings-row settings-provider-row">
@@ -82,6 +90,7 @@ export function attachSettingsModal({
   const clearBtn = modal.querySelector<HTMLButtonElement>(".settings-clear")!;
   const closeBtn = modal.querySelector<HTMLButtonElement>(".settings-close")!;
   const testBtns = modal.querySelectorAll<HTMLButtonElement>(".settings-test");
+  const showBtns = modal.querySelectorAll<HTMLButtonElement>(".settings-show");
   const testResultBoxes = {
     gemini: modal.querySelector<HTMLDivElement>(
       ".settings-test-result[data-provider='gemini']",
@@ -90,14 +99,62 @@ export function attachSettingsModal({
       ".settings-test-result[data-provider='openai']",
     )!,
   };
+  const metaBoxes = {
+    "gemini-key": modal.querySelector<HTMLDivElement>(
+      ".settings-key-meta[data-target='gemini-key']",
+    )!,
+    "openai-key": modal.querySelector<HTMLDivElement>(
+      ".settings-key-meta[data-target='openai-key']",
+    )!,
+  };
+
+  const updateMeta = (input: HTMLInputElement) => {
+    const meta = metaBoxes[input.id as keyof typeof metaBoxes];
+    if (!meta) return;
+    const v = input.value;
+    const len = v.length;
+    if (len === 0) {
+      meta.textContent = "0 chars · empty";
+      meta.classList.remove("warn");
+      return;
+    }
+    // Flag common paste mistakes: surrounding whitespace, leading "Bearer ",
+    // suspicious lookalike characters.
+    const trimmed = v.trim();
+    const warnings: string[] = [];
+    if (trimmed.length !== len) warnings.push("leading/trailing space");
+    if (/^bearer\s/i.test(trimmed))
+      warnings.push("starts with 'Bearer ' — omit it");
+    const prefix = trimmed.slice(0, 6);
+    const suffix = trimmed.length > 12 ? "…" + trimmed.slice(-4) : "";
+    meta.textContent = `${len} chars · ${prefix}${suffix}${warnings.length ? " · ⚠ " + warnings.join(", ") : ""}`;
+    meta.classList.toggle("warn", warnings.length > 0);
+  };
+
+  for (const inp of [geminiInput, openaiInput]) {
+    inp.addEventListener("input", () => updateMeta(inp));
+  }
+
+  for (const btn of showBtns) {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.target;
+      if (!id) return;
+      const input = modal.querySelector<HTMLInputElement>(`#${id}`);
+      if (!input) return;
+      const revealing = input.type === "password";
+      input.type = revealing ? "text" : "password";
+      btn.textContent = revealing ? "hide" : "show";
+    });
+  }
 
   for (const btn of testBtns) {
     btn.addEventListener("click", async () => {
       const provider = btn.dataset.provider as Provider;
       const box = testResultBoxes[provider];
-      const key = (provider === "gemini" ? geminiInput : openaiInput).value;
+      const input = provider === "gemini" ? geminiInput : openaiInput;
+      const key = input.value.trim();
       btn.disabled = true;
-      box.textContent = "testing…";
+      box.textContent = `testing… (${key.slice(0, 6)}${key.length > 10 ? "…" + key.slice(-4) : ""}, ${key.length} chars)`;
       box.classList.remove("ok", "error");
       try {
         const result =
@@ -156,6 +213,8 @@ export function attachSettingsModal({
     const s = getSettings();
     geminiInput.value = s.geminiKey;
     openaiInput.value = s.openaiKey;
+    updateMeta(geminiInput);
+    updateMeta(openaiInput);
     renderProvider(focusProvider ?? s.preferredProvider);
     backdrop.hidden = false;
     queueMicrotask(() => {

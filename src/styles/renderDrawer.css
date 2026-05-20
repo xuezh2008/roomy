@@ -427,6 +427,51 @@
   gap: 10px;
 }
 
+.settings-input-wrap {
+  position: relative;
+  display: block;
+}
+
+.settings-input-wrap .settings-input {
+  width: 100%;
+  padding-right: 52px; /* room for the show/hide toggle */
+}
+
+.settings-show {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+}
+
+.settings-show:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.settings-key-meta {
+  margin-left: 140px; /* align under the input column */
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-mute);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.settings-key-meta.warn {
+  color: var(--accent);
+}
+
 .settings-test {
   padding: 6px 10px;
   background: transparent;
