@@ -1,5 +1,7 @@
 import type { AISettings } from "../persistence/settings";
 import type { Provider } from "../ai/types";
+import { testGeminiKey } from "../ai/gemini";
+import { testOpenAIKey } from "../ai/openai";
 
 // Settings popup: enter API keys + pick preferred provider. Keys are stored
 // in this browser's localStorage. The modal makes the trade-off explicit
@@ -39,15 +41,23 @@ export function attachSettingsModal({
       tab can read them — only paste a key on a device you trust. Rotate
       after testing if anyone else may have hit this URL.
     </p>
-    <div class="settings-row">
-      <label class="settings-label" for="gemini-key">Gemini (nano-banana)</label>
-      <input id="gemini-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
-      <a class="settings-help" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">get a key ↗</a>
+    <div class="settings-key-block">
+      <div class="settings-row">
+        <label class="settings-label" for="gemini-key">Gemini (nano-banana)</label>
+        <input id="gemini-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
+        <button type="button" class="settings-test" data-provider="gemini">Test</button>
+        <a class="settings-help" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">get a key ↗</a>
+      </div>
+      <div class="settings-test-result" data-provider="gemini"></div>
     </div>
-    <div class="settings-row">
-      <label class="settings-label" for="openai-key">OpenAI (gpt-image-1)</label>
-      <input id="openai-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
-      <a class="settings-help" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">get a key ↗</a>
+    <div class="settings-key-block">
+      <div class="settings-row">
+        <label class="settings-label" for="openai-key">OpenAI (gpt-image-1)</label>
+        <input id="openai-key" type="password" class="settings-input" autocomplete="off" spellcheck="false" />
+        <button type="button" class="settings-test" data-provider="openai">Test</button>
+        <a class="settings-help" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">get a key ↗</a>
+      </div>
+      <div class="settings-test-result" data-provider="openai"></div>
     </div>
     <div class="settings-row settings-provider-row">
       <span class="settings-label">Preferred</span>
@@ -71,6 +81,36 @@ export function attachSettingsModal({
   const saveBtn = modal.querySelector<HTMLButtonElement>(".settings-save")!;
   const clearBtn = modal.querySelector<HTMLButtonElement>(".settings-clear")!;
   const closeBtn = modal.querySelector<HTMLButtonElement>(".settings-close")!;
+  const testBtns = modal.querySelectorAll<HTMLButtonElement>(".settings-test");
+  const testResultBoxes = {
+    gemini: modal.querySelector<HTMLDivElement>(
+      ".settings-test-result[data-provider='gemini']",
+    )!,
+    openai: modal.querySelector<HTMLDivElement>(
+      ".settings-test-result[data-provider='openai']",
+    )!,
+  };
+
+  for (const btn of testBtns) {
+    btn.addEventListener("click", async () => {
+      const provider = btn.dataset.provider as Provider;
+      const box = testResultBoxes[provider];
+      const key = (provider === "gemini" ? geminiInput : openaiInput).value;
+      btn.disabled = true;
+      box.textContent = "testing…";
+      box.classList.remove("ok", "error");
+      try {
+        const result =
+          provider === "gemini"
+            ? await testGeminiKey(key)
+            : await testOpenAIKey(key);
+        box.textContent = result.message;
+        box.classList.add(result.ok ? "ok" : "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
 
   let currentProvider: Provider = "gemini";
 

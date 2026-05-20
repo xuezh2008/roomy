@@ -76,3 +76,43 @@ function base64ToBlob(b64: string, mime: string): Blob {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: mime });
 }
+
+// Lightweight key check: GET /v1/models is free, validates auth.
+// Does NOT confirm gpt-image-1 access specifically — that requires a
+// verified organization which we can only detect on a real edit call.
+export interface TestResult {
+  ok: boolean;
+  message: string;
+}
+
+export async function testOpenAIKey(apiKey: string): Promise<TestResult> {
+  if (!apiKey.trim()) return { ok: false, message: "Empty key." };
+  try {
+    const response = await fetch("https://api.openai.com/v1/models", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiKey.trim()}` },
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const models = Array.isArray(data.data) ? data.data : [];
+      const hasImage = models.some(
+        (m: { id?: string }) => m.id === "gpt-image-1",
+      );
+      return hasImage
+        ? { ok: true, message: "✓ key works, gpt-image-1 available." }
+        : {
+            ok: true,
+            message:
+              "✓ key works, but gpt-image-1 not listed — your org may need verification at https://platform.openai.com/settings/organization/general",
+          };
+    }
+    const data = await response.json().catch(() => ({}));
+    const apiMsg = data.error?.message ?? `HTTP ${response.status}`;
+    return { ok: false, message: humanizeOpenAIError(response.status, apiMsg) };
+  } catch (e) {
+    return {
+      ok: false,
+      message: `Network error: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+}

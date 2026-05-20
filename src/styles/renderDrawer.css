@@ -414,11 +414,62 @@
   color: var(--ink);
 }
 
+.settings-key-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .settings-row {
   display: grid;
-  grid-template-columns: 130px 1fr auto;
+  grid-template-columns: 130px 1fr auto auto;
   align-items: center;
   gap: 10px;
+}
+
+.settings-test {
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.settings-test:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.settings-test:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.settings-test-result {
+  margin-left: 140px; /* aligns under the input column */
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  min-height: 0;
+}
+
+.settings-test-result:empty {
+  display: none;
+}
+
+.settings-test-result.ok {
+  color: var(--success);
+}
+
+.settings-test-result.error {
+  color: var(--accent);
 }
 
 .settings-label {

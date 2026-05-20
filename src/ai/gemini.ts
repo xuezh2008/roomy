@@ -121,3 +121,48 @@ function base64ToBlob(b64: string, mime: string): Blob {
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: mime });
 }
+
+// Lightweight key check: tiny image-gen request that catches the three
+// common failure modes (invalid key / free-tier blocked / actually working).
+// No input image, minimal prompt → cheapest call that still validates the
+// image-gen quota path.
+export interface TestResult {
+  ok: boolean;
+  message: string;
+}
+
+export async function testGeminiKey(apiKey: string): Promise<TestResult> {
+  if (!apiKey.trim()) return { ok: false, message: "Empty key." };
+  try {
+    const response = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "x-goog-api-key": apiKey.trim(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: "a single red dot on white" }] }],
+        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+      }),
+    });
+    const data: GeminiResponse = await response.json();
+    if (response.ok && !data.error) {
+      const hasImage = data.candidates?.[0]?.content?.parts?.some(
+        (p) => (p.inlineData ?? p.inline_data)?.data,
+      );
+      return hasImage
+        ? { ok: true, message: "✓ key works, billing active." }
+        : {
+            ok: false,
+            message: "Key responded but no image — model not enabled?",
+          };
+    }
+    const msg = data.error?.message ?? `HTTP ${response.status}`;
+    return { ok: false, message: humanizeGeminiError(data.error?.code ?? response.status, msg) };
+  } catch (e) {
+    return {
+      ok: false,
+      message: `Network error: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+}
