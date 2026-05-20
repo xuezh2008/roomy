@@ -21,11 +21,25 @@ interface GeminiPart {
   inline_data?: { mime_type: string; data: string };
 }
 
+interface GeminiErrorDetail {
+  "@type"?: string;
+  reason?: string;
+  domain?: string;
+  metadata?: Record<string, string>;
+}
+
+interface GeminiError {
+  code: number;
+  message: string;
+  status: string;
+  details?: GeminiErrorDetail[];
+}
+
 interface GeminiResponse {
   candidates?: Array<{
     content?: { parts?: GeminiPart[] };
   }>;
-  error?: { code: number; message: string; status: string };
+  error?: GeminiError;
 }
 
 export async function callGemini(req: RenderRequest): Promise<Blob> {
@@ -53,9 +67,7 @@ export async function callGemini(req: RenderRequest): Promise<Blob> {
   const data: GeminiResponse = await response.json();
 
   if (!response.ok || data.error) {
-    const apiMsg = data.error?.message ?? `HTTP ${response.status}`;
-    const code = data.error?.code ?? response.status;
-    throw new Error(humanizeGeminiError(code, apiMsg));
+    throw new Error(humanizeGeminiError(response.status, data.error));
   }
 
   const parts = data.candidates?.[0]?.content?.parts ?? [];
@@ -77,10 +89,19 @@ export async function callGemini(req: RenderRequest): Promise<Blob> {
   );
 }
 
-// Pull the first useful sentence out of Gemini's verbose error responses and
-// give it actionable framing. The raw API message dumps doc URLs + per-metric
-// breakdowns that don't help anyone fix the problem.
-function humanizeGeminiError(code: number, raw: string): string {
+// Translate Gemini's verbose error responses into actionable guidance.
+// Uses error.details[].reason (REST API code) where available — those are
+// stable identifiers like API_KEY_HTTP_REFERRER_BLOCKED that map cleanly
+// to a specific fix.
+export function humanizeGeminiError(
+  httpStatus: number,
+  error: GeminiError | undefined,
+): string {
+  const code = error?.code ?? httpStatus;
+  const raw = error?.message ?? `HTTP ${httpStatus}`;
+  const reason = error?.details?.[0]?.reason ?? "";
+  const combined = `${raw} ${reason}`;
+
   const isQuota = code === 429 || /quota/i.test(raw) || /rate limit/i.test(raw);
   const isFreeTierZero = /limit:\s*0/i.test(raw);
 
@@ -94,11 +115,60 @@ function humanizeGeminiError(code: number, raw: string): string {
     const retry = raw.match(/retry in ([\d.]+)\s*s/i);
     return `Gemini: rate limited${retry ? ` (retry in ${Math.ceil(parseFloat(retry[1]))} s)` : ""}. Try again shortly or switch to OpenAI.`;
   }
-  if (code === 400 && /api[\s_-]?key/i.test(raw)) {
+  if (code === 400 && /api[\s_-]?key/i.test(combined)) {
     return "Gemini: API key rejected. Generate one at https://aistudio.google.com/apikey and paste it via the ⚙ button.";
   }
   if (code === 401 || code === 403) {
-    return "Gemini: API key isn't authorized for this model. Check key permissions at https://aistudio.google.com/apikey.";
+    // 403 has several specific reasons — map by error.details[0].reason first,
+    // falling back to message-text matching for older API responses.
+    if (
+      reason === "API_KEY_HTTP_REFERRER_BLOCKED" ||
+      /referrer/i.test(combined)
+    ) {
+      return [
+        "Gemini: the key has HTTP-referrer restrictions that block https://xuezh2008.github.io.",
+        "",
+        "Fix one of:",
+        "• Edit the key at https://console.cloud.google.com/apis/credentials → Application restrictions → add `xuezh2008.github.io/*` to allowed referrers.",
+        "• Or generate an unrestricted key at https://aistudio.google.com/apikey — AI Studio keys default to no referrer restrictions.",
+      ].join("\n");
+    }
+    if (reason === "API_KEY_API_BLOCKED" || /api blocked|api_blocked/i.test(combined)) {
+      return [
+        "Gemini: the key is restricted from the Generative Language API.",
+        "",
+        "Fix: at https://console.cloud.google.com/apis/credentials → edit key → API restrictions → remove restrictions, or add 'Generative Language API' to the allowed list.",
+      ].join("\n");
+    }
+    if (reason === "API_KEY_IP_ADDRESS_BLOCKED" || /ip address/i.test(combined)) {
+      return [
+        "Gemini: the key has IP-address restrictions that block this browser.",
+        "",
+        "Fix: at https://console.cloud.google.com/apis/credentials → edit key → Application restrictions → remove the IP restriction, or pick HTTP referrer with `xuezh2008.github.io/*` instead.",
+      ].join("\n");
+    }
+    if (
+      reason === "SERVICE_DISABLED" ||
+      /service\s+(is\s+)?disabled|enable.*generative/i.test(combined)
+    ) {
+      return [
+        "Gemini: the Generative Language API isn't enabled on this key's Google Cloud project.",
+        "",
+        "Fix: visit https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com and click Enable for the project that owns this key.",
+      ].join("\n");
+    }
+    // Generic 401/403 with raw message + every diagnostic we can think of.
+    return [
+      `Gemini: ${code === 401 ? "key rejected" : "access denied"} for this model.`,
+      "",
+      `Google said: ${reason ? reason + " — " : ""}${raw.slice(0, 200)}`,
+      "",
+      "Common fixes:",
+      "• HTTP referrer restriction → add `xuezh2008.github.io/*` at https://console.cloud.google.com/apis/credentials.",
+      "• API restriction → allow Generative Language API on that page.",
+      "• Wrong project / API not enabled → enable at https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com.",
+      "• Or generate a fresh unrestricted key at https://aistudio.google.com/apikey.",
+    ].join("\n");
   }
   const firstSentence = raw.split(/(?<=[.!?])\s/, 1)[0] ?? raw;
   return `Gemini: ${firstSentence}`;
@@ -157,8 +227,10 @@ export async function testGeminiKey(apiKey: string): Promise<TestResult> {
             message: "Key responded but no image — model not enabled?",
           };
     }
-    const msg = data.error?.message ?? `HTTP ${response.status}`;
-    return { ok: false, message: humanizeGeminiError(data.error?.code ?? response.status, msg) };
+    return {
+      ok: false,
+      message: humanizeGeminiError(response.status, data.error),
+    };
   } catch (e) {
     return {
       ok: false,
