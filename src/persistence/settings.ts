@@ -12,6 +12,8 @@ export interface AISettings {
   preferredProvider: Provider;
   /** Whether the bottom render drawer is hidden (showing only the FAB). */
   drawerHidden: boolean;
+  /** Whether the 16:9 film-gate overlay is visible on the canvas. */
+  filmGateOn: boolean;
 }
 
 const DEFAULTS: AISettings = {
@@ -19,6 +21,7 @@ const DEFAULTS: AISettings = {
   openaiKey: "",
   preferredProvider: "gemini",
   drawerHidden: false,
+  filmGateOn: false,
 };
 
 export function loadSettings(): AISettings {

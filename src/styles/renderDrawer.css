@@ -641,6 +641,90 @@
   margin-top: 6px;
 }
 
+/* --- Film gate overlay --- */
+
+.film-gate {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.film-gate[hidden] {
+  display: none;
+}
+
+.film-gate-bar {
+  position: absolute;
+  background: rgba(28, 46, 74, 0.42);
+}
+
+.film-gate-frame {
+  position: absolute;
+  border: 1px dashed rgba(244, 235, 217, 0.65);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.film-gate.overscan .film-gate-frame {
+  border-color: var(--accent);
+  border-style: solid;
+  border-width: 1.5px;
+}
+
+.film-gate-label {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--paper);
+  background: rgba(28, 46, 74, 0.78);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.film-gate.overscan .film-gate-label {
+  background: var(--accent);
+}
+
+.film-gate-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+  background: rgba(28, 46, 74, 0.78);
+  color: var(--paper);
+  border: 1px solid rgba(244, 235, 217, 0.2);
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.film-gate-toggle:hover {
+  background: rgba(28, 46, 74, 0.92);
+}
+
+.film-gate-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.film-gate-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
 html[data-mode="mobile"] .render-drawer[data-state="expanded"] {
   /* Expanded drawer takes most of canvas-shell vertically. canvas-shell is
    * already row 1 (1fr) of the mobile grid, so the sidebar in row 2 stays

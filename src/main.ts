@@ -17,6 +17,7 @@ import { attachFogPanel } from "./ui/fogPanel";
 import { attachFogBridge } from "./scene/fogBridge";
 import { attachRenderDrawer } from "./ui/renderDrawer";
 import { attachSettingsModal } from "./ui/settingsModal";
+import { attachFilmGate } from "./ui/filmGate";
 import { loadSettings, saveSettings, type AISettings } from "./persistence/settings";
 import { buildScene } from "./scene";
 import { createStore } from "./state/store";
@@ -149,6 +150,16 @@ const renderDrawer = attachRenderDrawer({
     orbitTarget: orbit.controls.target,
   }),
 });
+
+// Film-gate overlay (16:9 capture preview). Toggle persists in AISettings.
+const filmGate = attachFilmGate({
+  host: canvasShell,
+  initialVisible: aiSettings.filmGateOn ?? false,
+  onToggle: (v) => {
+    aiSettings = { ...aiSettings, filmGateOn: v };
+    saveSettings(aiSettings);
+  },
+});
 const detachKeyboard = attachKeyboard({
   onAddObject: () => sidebar.focusNameInput(),
   onRotate: () => {
@@ -217,6 +228,7 @@ if (import.meta.hot) {
     visibility.detach();
     mobile.detach();
     detachKeyboard();
+    filmGate.detach();
     renderDrawer.detach();
     settingsModal.detach();
     fogPanel.detach();

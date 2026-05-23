@@ -612,8 +612,7 @@
 
 html[data-mode="mobile"] .sidebar {
   position: static;
-  height: auto;
-  max-height: 50dvh;
+  height: 100%; /* fill the 50dvh row from theme.css */
   overflow-y: auto;
   border-left: none;
   border-top: var(--border);
